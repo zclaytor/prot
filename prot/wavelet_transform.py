@@ -124,8 +124,7 @@ class WaveletTransform(object):
                                 label=lc.label,
                                 meta=lc.meta)
         
-    def plot(self, ax=None, xlabel=None, ylabel=None, title='',
-             **kwargs):
+    def plot(self, ax=None, xlabel=None, ylabel=None, title='', **kwargs):
         """Plots the WaveletTransform.
         Parameters
         ----------
@@ -145,7 +144,6 @@ class WaveletTransform(object):
         ax : `~matplotlib.axes.Axes`
             The matplotlib axes object.
         """
-
         if ax is None:
             fig, ax = plt.subplots()
 
@@ -165,6 +163,43 @@ class WaveletTransform(object):
         ax.set_ylabel(ylabel)
         ax.set_yscale('log', base=2)
         ax.set_ylim(self.period.max(), self.period.min())
+
+        ax.set_title(title)
+        return ax
+
+    def plot_gwps(self, ax=None, xlabel=None, ylabel=None, title='', **kwargs):
+        """Plots the Global Wavelet Power Spectrum
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes`
+            A matplotlib axes object to plot into. If no axes is provided,
+            a new one will be generated.
+        xlabel : str
+            Plot x axis label
+        ylabel : str
+            Plot y axis label
+        title : str
+            Plot set_title
+        kwargs : dict
+            Dictionary of arguments to be passed to `matplotlib.pyplot.plot`.
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            The matplotlib axes object.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        # Plot global wavelet power spectrum
+        ax.plot(self.period, self.gwps, 'k', **kwargs)
+        
+        if ylabel is None:
+            ylabel = "Power (arbitrary units)"
+        if xlabel is None:
+            xlabel = "Period (days)"
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
 
         ax.set_title(title)
         return ax
