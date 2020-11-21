@@ -16,40 +16,49 @@ class WaveletTransform(object):
     
     Attributes
     ----------
-    frequency : `~astropy.units.Quantity`
-        Array of frequencies as an AstroPy Quantity object.
-    power : `~astropy.units.Quantity`
-        Array of power-spectral-densities. The Quantity must have units of
-        `flux^2 / freq_unit`, where freq_unit is the unit of the frequency
-        attribute.
+    lightcurve : `lightkurve.LightCurve`
+        light curve from which the WaveletTransform is constructed.
+    period : numpy array
+        Array of periods.
+    power : numpy array
+        Array of power-spectral-densities.
+    wavelet : one of the wavelets from `scipy.signal`
+        The wavelet with which the WaveletTransform is constructed.
+    w : int
+        The wavelet parameter.
     nyquist : float
-        The Nyquist frequency of the lightcurve. In units of freq_unit, where
-        freq_unit is the unit of the frequency attribute.
-    #label : str
-    #    Human-friendly object label, e.g. "KIC 123456789".
-    #targetid : str
-    #    Identifier of the target.
-    default_view : "frequency" or "period"
-        Should plots be shown in frequency space or period space by default?
-    #meta : dict
-    #    Free-form metadata associated with the Periodogram.
+        The Nyquist frequency of the lightcurve.
     """
-    def __init__(self, time, flux, period, power, wavelet, w,
-                 nyquist=None, label=None, 
-                 targetid=None, meta={}):
-        self.time = time
-        self.flux = flux
+    def __init__(self, lightcurve, period, power, wavelet, w, nyquist=None):
+        self.lightcurve = lightcurve
         self.period = period
         self.power = power
         self.wavelet = wavelet
         self.w = w
         self.nyquist = nyquist
-        self.label = label
-        self.targetid = targetid
-        self.meta = meta
 
     def __repr__(self):
         return("WaveletTransform(ID: {})".format(self.label))
+
+    @property
+    def time(self):
+        """Returns the array of time from the light curve."""
+        return self.lightcurve.time
+
+    @property
+    def label(self):
+        """Returns the label from the light curve."""
+        return self.lightcurve.label
+
+    @property
+    def targetid(self):
+        """Returns the targetid from the light curve."""
+        return self.lightcurve.targetid
+
+    @property
+    def meta(self):
+        """Returns meta dict from the light curve."""
+        return self.lightcurve.meta
 
     @property
     def frequency(self):
@@ -88,7 +97,26 @@ class WaveletTransform(object):
                         minimum_period=None,
                         maximum_period=None,
                         period_samples=512):
-        """Docstring
+        """Computes the wavelet power spectrum from a `lightkurve.LightCurve`.
+
+        Parameters
+        ----------
+        lc : `lightkurve.LightCurve`
+            The light curve from which to compute the wavelet transform.
+        wavelet : one of the wavelets from `scipy.signal`
+            The wavelet with which the WaveletTransform is constructed.
+        w : int
+            The wavelet parameter.
+        period : numpy array
+            Array of periods at which to compute the power.
+        minimum_period : float
+            If specified, use this rather than the nyquist frequency.
+        maximum_period : float
+            If specified, use this rather than the time baseline.
+        period_samples : int
+            If `period` is not specified, use `minimum_period` and 
+            `maximum_period` to define the period array, using `period_samples`
+            points.
         """
         if np.isnan(lc.flux).any():
             lc = lc.fill_gaps()
@@ -117,16 +145,14 @@ class WaveletTransform(object):
         cwtm = signal.cwt(flux, wavelet, widths, w=w)
         power = np.abs(cwtm)**2 / widths[:, np.newaxis]
         
-        return WaveletTransform(lc.time.copy(), lc.flux.copy(),
-                                period, power,
+        return WaveletTransform(lc, period, power,
                                 wavelet=wavelet, w=w,
-                                nyquist=nyquist,
-                                targetid=lc.targetid,
-                                label=lc.label,
-                                meta=lc.meta)
+                                nyquist=nyquist)
         
-    def plot(self, ax=None, xlabel=None, ylabel=None, title='', style=None, **kwargs):
+    def plot(self, ax=None, xlabel=None, ylabel=None, title='', cmap='binary', 
+             style=None, **kwargs):
         """Plots the WaveletTransform.
+
         Parameters
         ----------
         ax : `~matplotlib.axes.Axes`
@@ -138,6 +164,12 @@ class WaveletTransform(object):
             Plot y axis label
         title : str
             Plot set_title
+        cmap : str or matplotlib colormap object
+            Colormap for wavelet transform heat map.
+        style : str
+            Path or URL to a matplotlib style file, or name of one of
+            matplotlib's built-in stylesheets (e.g. 'ggplot').
+            Lightkurve's custom stylesheet is used by default.
         kwargs : dict
             Dictionary of arguments to be passed to `matplotlib.pyplot.pcolormesh`.
         Returns
@@ -153,14 +185,15 @@ class WaveletTransform(object):
                 fig, ax = plt.subplots()
 
             # Plot wavelet power spectrum
-            ax.pcolormesh(self.time, self.period, self.power, shading='auto', **kwargs)
+            ax.pcolormesh(self.time, self.period, self.power, shading='auto', 
+                cmap=cmap, **kwargs)
 
             # Plot cone of influence
             ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
             ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
             
             if xlabel is None:
-                xlabel = "Time - 2457000 (BTJD days)"
+                xlabel = "Time - 2457000 [BTJD days]"
             if ylabel is None:
                 ylabel = "Period (days)"
 
@@ -172,20 +205,27 @@ class WaveletTransform(object):
             ax.set_title(title)
         return ax
 
-    def plot_gwps(self, ax=None, xlabel=None, ylabel=None, title='', style=None,
+    def plot_gwps(self, ax=None, scale="linear", xlabel=None, ylabel=None, title='', style=None,
                   **kwargs):
         """Plots the Global Wavelet Power Spectrum
+
         Parameters
         ----------
         ax : `~matplotlib.axes.Axes`
             A matplotlib axes object to plot into. If no axes is provided,
             a new one will be generated.
+        scale: str
+            Set x,y axis to be "linear" or "log". Default is linear.
         xlabel : str
             Plot x axis label
         ylabel : str
             Plot y axis label
         title : str
             Plot set_title
+        style : str
+            Path or URL to a matplotlib style file, or name of one of
+            matplotlib's built-in stylesheets (e.g. 'ggplot').
+            Lightkurve's custom stylesheet is used by default.
         kwargs : dict
             Dictionary of arguments to be passed to `matplotlib.pyplot.plot`.
         Returns
@@ -210,14 +250,118 @@ class WaveletTransform(object):
 
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-
+            ax.set_xscale(scale)
+            ax.set_yscale(scale)
             ax.set_title(title)
         return ax
 
-    def plot_all(self):
-        """Docstring
+    def _plot_gwps_vertical(self, ax=None, scale="linear", 
+                            xlabel=None, ylabel=None, title='', 
+                            style=None, **kwargs):
+        """Plots the Global Wavelet Power Spectrum vertically.
+        Intended for use with `WaveletTransform.plot_all`.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes`
+            A matplotlib axes object to plot into. If no axes is provided,
+            a new one will be generated.
+        scale: str
+            Set x,y axis to be "linear" or "log". Default is linear.
+        xlabel : str
+            Plot x axis label
+        ylabel : str
+            Plot y axis label
+        title : str
+            Plot set_title
+        style : str
+            Path or URL to a matplotlib style file, or name of one of
+            matplotlib's built-in stylesheets (e.g. 'ggplot').
+            Lightkurve's custom stylesheet is used by default.
+        kwargs : dict
+            Dictionary of arguments to be passed to `matplotlib.pyplot.plot`.
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            The matplotlib axes object.
         """
-        pass
+        if style is None or style == "lightkurve":
+            style = MPLSTYLE
+        
+        with plt.style.context(style):
+            if ax is None:
+                fig, ax = plt.subplots()
+
+            # Plot global wavelet power spectrum
+            ax.plot(self.gwps, self.period, 'k', **kwargs)
+            
+            if xlabel is None:
+                xlabel = "Power (arbitrary units)"
+            if ylabel is None:
+                ylabel = "Period (days)"
+
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_xscale(scale)
+            #ax.set_yscale(scale) plot shares yscale with wavelet decomposition
+            ax.set_title(title)
+        return ax
+
+    def plot_lightcurve(self, *args, **kwargs):
+        """Wrapper for `lightkurve.LightCurve.plot`."""
+        return self.lightcurve.plot(*args, **kwargs)
+
+    def plot_all(self, figsize=(10, 8), style=None, 
+        wavelet_kwargs={}, gwps_kwargs={}, lightcurve_kwargs={}, **kwargs):
+        """Plots all 3 graphs, with the largest being the wavelet transform
+        in the main panel, the light curve on top, and the global wavelet
+        power spectrum to the right.
+
+        Parameters
+        ----------
+        figsize : tuple
+            The size of the figure.
+        style : str
+            Path or URL to a matplotlib style file, or name of one of
+            matplotlib's built-in stylesheets (e.g. 'ggplot').
+            Lightkurve's custom stylesheet is used by default.
+        wavelet_kwargs : dict
+            Keyword arguments to be passed to `WaveletTransform.plot`.
+        gwps_kwargs : dict
+            Keyword arguments to be passed to `WaveletTransform.plot_gwps`.
+        lightcurve_kwargs : dict
+            Keyword arguments to be passed to `WaveletTransform.plot_lightcurve`.
+        """
+        if style is None or style == "lightkurve":
+            style = MPLSTYLE
+        
+        with plt.style.context(style):
+            fig = plt.figure(figsize=figsize, tight_layout=True)
+            gs = fig.add_gridspec(2, 2, 
+                width_ratios=(1, 0.2), 
+                height_ratios=(0.3, 1), 
+                hspace=0, wspace=0)
+            
+            ax1 = fig.add_subplot(gs[1, 0])
+            ax1 = self.plot(ax=ax1, **wavelet_kwargs, **kwargs)
+                    
+            ax2 = fig.add_subplot(gs[1, 1])
+            ax2 = self._plot_gwps_vertical(ax=ax2, 
+                xlabel='Power', ylabel='', 
+                **gwps_kwargs, **kwargs)
+            ax2.set_yscale('log', base=2)
+            ax2.set_ylim(self.period.max(), self.period.min())
+            ax2.xaxis.set_ticks([])
+            ax2.yaxis.set_visible(False)
+
+            ax3 = fig.add_subplot(gs[0, 0], sharex=ax1)
+            ax3 = self.plot_lightcurve(ax=ax3, 
+                xlabel='', ylabel='Flux', label=None, 
+                **lightcurve_kwargs, **kwargs)
+            ax3.xaxis.set_visible(False)
+            ax3.yaxis.set_ticks([])
+        
+        return fig, (ax1, ax2, ax3)
 
     
 def wavelet_transform(lc, 
@@ -227,7 +371,37 @@ def wavelet_transform(lc,
                       minimum_period=None,
                       maximum_period=None,
                       period_samples=512):
-    """Docstring
+    """Computes the wavelet power spectrum from a `lightkurve.LightCurve`.
+
+    Parameters
+    ----------
+    lc : `lightkurve.LightCurve`
+        The light curve from which to compute the wavelet transform.
+    wavelet : one of the wavelets from `scipy.signal`
+        The wavelet with which the WaveletTransform is constructed.
+    w : int
+        The wavelet parameter.
+    period : numpy array
+        Array of periods at which to compute the power.
+    minimum_period : float
+        If specified, use this rather than the nyquist frequency.
+    maximum_period : float
+        If specified, use this rather than the time baseline.
+    period_samples : int
+        If `period` is not specified, use `minimum_period` and 
+        `maximum_period` to define the period array, using `period_samples`
+        points.
+
+    Returns
+    -------
+    time : numpy array
+        The time axis for the wavelet transform.
+    period : numpy array
+        The period axis for the wavelet transform.
+    power : numpy array
+        The power spectral density.
+    coi : numpy array
+        The cone of influence, below which edge effects become worrisome.
     """
     if np.isnan(lc.flux).any():
         lc = lc.fill_gaps()
@@ -265,11 +439,43 @@ def wavelet_transform(lc,
 def wavelet_plot(time, period, power, flux, coi=None,
                  xlabel='time', ylabel='period', flabel='flux', plabel='power',
                  **kw):
+    """Plots all 3 graphs, with the largest being the wavelet transform
+    in the main panel, the light curve on top, and the global wavelet
+    power spectrum to the right.
+
+    Parameters
+    ----------
+    time : numpy array
+        The time axis for the wavelet transform.
+    period : numpy array
+        The period axis for the wavelet transform.
+    power : numpy array
+        The power spectral density.
+    flux : numpy array
+        The light curve flux.
+    coi : numpy array
+        The cone of influence, below which edge effects become worrisome.
+    xlabel : str, optional
+        The label for the time axis.
+    ylabel : str, optional
+        The label for the period axis.
+    flabel : str, optional
+        The label for the flux axis of the light curve panel.
+    plabel : str, optional
+        The label for the power axis of the global wavelet power spectrum panel.
+
+    Returns
+    -------
+    fig : `matplotlib.Figure`
+        The figure for the plot.
+    (ax1, ax2, ax3) : tuple of `matplotlib.pyplot.Axes`
+        Tuple containing the axes handles for the plot.
+    """
     fig = plt.figure(figsize=(8, 6), tight_layout=True)
     gs = fig.add_gridspec(2, 2, width_ratios=(1, 0.2), height_ratios=(0.3, 1), hspace=0, wspace=0)
     
     ax1 = fig.add_subplot(gs[1, 0])
-    ax1.pcolormesh(time, period, power, cmap='viridis', shading='auto', rasterized=True, **kw)
+    ax1.pcolormesh(time, period, power, cmap='binary', shading='auto', rasterized=True, **kw)
     
     if coi is not None:
         ax1.plot(time, coi, 'k', linewidth=1, rasterized=True)
@@ -280,9 +486,6 @@ def wavelet_plot(time, period, power, flux, coi=None,
 
     ax1.set_yscale('log', base=2)
     ax1.set_ylim(period.max(), period.min())
-    
-    #ax1.yaxis.set_major_formatter(ticker.ScalarFormatter())
-    #ax1.ticklabel_format(axis='y', style='scientific')
     
     ax2 = fig.add_subplot(gs[1, 1], sharey=ax1)
     global_ws = power.sum(axis=1)
@@ -298,8 +501,5 @@ def wavelet_plot(time, period, power, flux, coi=None,
     ax3.xaxis.set_visible(False)
     ax3.yaxis.set_ticks([])
     ax3.set_xlim(time.min(), time.max())
-  
-    for ax in ax1, ax2, ax3:
-        ax.tick_params('both', direction='inout')
     
     return fig, (ax1, ax2, ax3)
