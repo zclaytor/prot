@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib import ticker
 
+MPLSTYLE = "/home/zach/anaconda3/envs/rotation/lib/python3.8/site-packages/lightkurve/data/lightkurve.mplstyle"
 
 class WaveletTransform(object):
     """
@@ -124,7 +125,7 @@ class WaveletTransform(object):
                                 label=lc.label,
                                 meta=lc.meta)
         
-    def plot(self, ax=None, xlabel=None, ylabel=None, title='', **kwargs):
+    def plot(self, ax=None, xlabel=None, ylabel=None, title='', style=None, **kwargs):
         """Plots the WaveletTransform.
         Parameters
         ----------
@@ -144,30 +145,35 @@ class WaveletTransform(object):
         ax : `~matplotlib.axes.Axes`
             The matplotlib axes object.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-
-        # Plot wavelet power spectrum
-        ax.pcolormesh(self.time, self.period, self.power, shading='auto', **kwargs)
-
-        # Plot cone of influence
-        ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
-        ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
+        if style is None or style == "lightkurve":
+            style = MPLSTYLE
         
-        if xlabel is None:
-            xlabel = "Time - 2457000 (BTJD days)"
-        if ylabel is None:
-            ylabel = "Period (days)"
+        with plt.style.context(style):
+            if ax is None:
+                fig, ax = plt.subplots()
 
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_yscale('log', base=2)
-        ax.set_ylim(self.period.max(), self.period.min())
+            # Plot wavelet power spectrum
+            ax.pcolormesh(self.time, self.period, self.power, shading='auto', **kwargs)
 
-        ax.set_title(title)
+            # Plot cone of influence
+            ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
+            ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
+            
+            if xlabel is None:
+                xlabel = "Time - 2457000 (BTJD days)"
+            if ylabel is None:
+                ylabel = "Period (days)"
+
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_yscale('log', base=2)
+            ax.set_ylim(self.period.max(), self.period.min())
+
+            ax.set_title(title)
         return ax
 
-    def plot_gwps(self, ax=None, xlabel=None, ylabel=None, title='', **kwargs):
+    def plot_gwps(self, ax=None, xlabel=None, ylabel=None, title='', style=None,
+                  **kwargs):
         """Plots the Global Wavelet Power Spectrum
         Parameters
         ----------
@@ -187,24 +193,33 @@ class WaveletTransform(object):
         ax : `~matplotlib.axes.Axes`
             The matplotlib axes object.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-
-        # Plot global wavelet power spectrum
-        ax.plot(self.period, self.gwps, 'k', **kwargs)
+        if style is None or style == "lightkurve":
+            style = MPLSTYLE
         
-        if ylabel is None:
-            ylabel = "Power (arbitrary units)"
-        if xlabel is None:
-            xlabel = "Period (days)"
+        with plt.style.context(style):
+            if ax is None:
+                fig, ax = plt.subplots()
 
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+            # Plot global wavelet power spectrum
+            ax.plot(self.period, self.gwps, 'k', **kwargs)
+            
+            if ylabel is None:
+                ylabel = "Power (arbitrary units)"
+            if xlabel is None:
+                xlabel = "Period (days)"
 
-        ax.set_title(title)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+
+            ax.set_title(title)
         return ax
 
+    def plot_all(self):
+        """Docstring
+        """
+        pass
 
+    
 def wavelet_transform(lc, 
                       wavelet=signal.morlet2,
                       w=6,
@@ -248,7 +263,7 @@ def wavelet_transform(lc,
     return time, period, power, coi
 
 def wavelet_plot(time, period, power, flux, coi=None,
-                 xlabel='time', ylabel='period', flabel='flux', plabel='power', 
+                 xlabel='time', ylabel='period', flabel='flux', plabel='power',
                  **kw):
     fig = plt.figure(figsize=(8, 6), tight_layout=True)
     gs = fig.add_gridspec(2, 2, width_ratios=(1, 0.2), height_ratios=(0.3, 1), hspace=0, wspace=0)
