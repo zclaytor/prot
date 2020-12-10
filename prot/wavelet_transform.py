@@ -43,7 +43,7 @@ class WaveletTransform(object):
     @property
     def time(self):
         """Returns the array of time from the light curve."""
-        return self.lightcurve.time
+        return self.lightcurve.time.value
 
     @property
     def label(self):
@@ -121,9 +121,9 @@ class WaveletTransform(object):
         if np.isnan(lc.flux).any():
             lc = lc.fill_gaps()
 
-        time = lc.time.copy()
+        time = lc.time.copy().value
         time -= time[0]
-        flux = lc.flux.copy()
+        flux = lc.flux.copy().value
         flux -= flux.mean()
 
         nyquist = 0.5 * (1./(np.median(np.diff(time))))
