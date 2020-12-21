@@ -119,7 +119,7 @@ class WaveletTransform(object):
             points.
         """
         if np.isnan(lc.flux).any():
-            lc = lc.fill_gaps()
+            lc = lc.remove_nans()
 
         time = lc.time.copy().value
         time -= time[0]
