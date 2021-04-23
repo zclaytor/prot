@@ -14,7 +14,7 @@ result = lk.search_lightcurve("TIC 149308317", author="tess-spoc", sector=range(
 lcs = res.download_all(flux_column="sap_flux").stitch()
 
 from prot import WaveletTransform
-wt = WaveletTransform.from_lightcurve()
+wt = WaveletTransform.from_lightcurve(lcs)
 
 wt.plot_all()
 ```
