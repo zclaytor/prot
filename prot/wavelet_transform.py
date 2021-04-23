@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib import ticker
 
-MPLSTYLE = "misc/lightkurve.mplstyle"
+from . import MPLSTYLE
 
 class WaveletTransform(object):
     """
