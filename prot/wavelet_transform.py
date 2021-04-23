@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib import ticker
 
-MPLSTYLE = "/home/zach/anaconda3/envs/rotation/lib/python3.8/site-packages/lightkurve/data/lightkurve.mplstyle"
+MPLSTYLE = "misc/lightkurve.mplstyle"
 
 class WaveletTransform(object):
     """
