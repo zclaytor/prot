@@ -149,8 +149,8 @@ class WaveletTransform(object):
                                 wavelet=wavelet, w=w,
                                 nyquist=nyquist)
         
-    def plot(self, ax=None, xlabel=None, ylabel=None, title='', cmap='binary', 
-             style=None, **kwargs):
+    def plot(self, ax=None, xlabel=None, ylabel=None, title='', plot_coi=True,
+             cmap='binary', style=None, **kwargs):
         """Plots the WaveletTransform.
 
         Parameters
@@ -164,6 +164,8 @@ class WaveletTransform(object):
             Plot y axis label
         title : str
             Plot set_title
+        plot_coi : bool
+            Whether to plot the cone of influence (COI)
         cmap : str or matplotlib colormap object
             Colormap for wavelet transform heat map.
         style : str
@@ -189,8 +191,9 @@ class WaveletTransform(object):
                 cmap=cmap, **kwargs)
 
             # Plot cone of influence
-            ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
-            ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
+            if plot_coi:
+                ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
+                ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
             
             if xlabel is None:
                 xlabel = "Time - 2457000 [BTJD days]"
@@ -311,7 +314,7 @@ class WaveletTransform(object):
         """Wrapper for `lightkurve.LightCurve.plot`."""
         return self.lightcurve.plot(*args, **kwargs)
 
-    def plot_all(self, figsize=(10, 8), style=None, 
+    def plot_all(self, figsize=(10, 8), style=None,
         wavelet_kwargs={}, gwps_kwargs={}, lightcurve_kwargs={}, **kwargs):
         """Plots all 3 graphs, with the largest being the wavelet transform
         in the main panel, the light curve on top, and the global wavelet
@@ -325,6 +328,8 @@ class WaveletTransform(object):
             Path or URL to a matplotlib style file, or name of one of
             matplotlib's built-in stylesheets (e.g. 'ggplot').
             Lightkurve's custom stylesheet is used by default.
+        plot_coi : bool
+            Whether to plot the cone of influence (COI) on the main panel.
         wavelet_kwargs : dict
             Keyword arguments to be passed to `WaveletTransform.plot`.
         gwps_kwargs : dict
@@ -343,7 +348,12 @@ class WaveletTransform(object):
                 hspace=0, wspace=0)
             
             ax1 = fig.add_subplot(gs[1, 0])
-            ax1 = self.plot(ax=ax1, **wavelet_kwargs, **kwargs)
+            try:
+                plot_coi = kwargs.pop("plot_coi")
+            except KeyError:
+                plot_coi = True
+
+            ax1 = self.plot(ax=ax1, plot_coi=plot_coi, **wavelet_kwargs, **kwargs)
                     
             ax2 = fig.add_subplot(gs[1, 1])
             ax2 = self._plot_gwps_vertical(ax=ax2, 
