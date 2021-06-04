@@ -22,6 +22,8 @@ class WaveletTransform(object):
         Array of periods.
     power : numpy array
         Array of power-spectral-densities.
+    phase : numpy array
+        Array of signal phase, computed using `numpy.angle`.
     wavelet : one of the wavelets from `scipy.signal`
         The wavelet with which the WaveletTransform is constructed.
     w : int
@@ -29,10 +31,11 @@ class WaveletTransform(object):
     nyquist : float
         The Nyquist frequency of the lightcurve.
     """
-    def __init__(self, lightcurve, period, power, wavelet, w, nyquist=None):
+    def __init__(self, lightcurve, period, power, phase, wavelet, w, nyquist=None):
         self.lightcurve = lightcurve
         self.period = period
         self.power = power
+        self.phase = phase
         self.wavelet = wavelet
         self.w = w
         self.nyquist = nyquist
@@ -144,8 +147,9 @@ class WaveletTransform(object):
         widths = w * nyquist * period / np.pi
         cwtm = signal.cwt(flux, wavelet, widths, w=w)
         power = np.abs(cwtm)**2 / widths[:, np.newaxis]
+        phase = np.angle(cwtm)
         
-        return WaveletTransform(lc, period, power,
+        return WaveletTransform(lc, period, power, phase,
                                 wavelet=wavelet, w=w,
                                 nyquist=nyquist)
         
@@ -373,6 +377,64 @@ class WaveletTransform(object):
         
         return fig, (ax1, ax2, ax3)
 
+    def plot_phase(self, ax=None, xlabel=None, ylabel=None, title='', plot_coi=True,
+             cmap='binary', style=None, **kwargs):
+        """Plots the WaveletTransform phase.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes`
+            A matplotlib axes object to plot into. If no axes is provided,
+            a new one will be generated.
+        xlabel : str
+            Plot x axis label
+        ylabel : str
+            Plot y axis label
+        title : str
+            Plot set_title
+        plot_coi : bool
+            Whether to plot the cone of influence (COI)
+        cmap : str or matplotlib colormap object
+            Colormap for wavelet transform heat map.
+        style : str
+            Path or URL to a matplotlib style file, or name of one of
+            matplotlib's built-in stylesheets (e.g. 'ggplot').
+            Lightkurve's custom stylesheet is used by default.
+        kwargs : dict
+            Dictionary of arguments to be passed to `matplotlib.pyplot.pcolormesh`.
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            The matplotlib axes object.
+        """
+        if style is None or style == "lightkurve":
+            style = MPLSTYLE
+        
+        with plt.style.context(style):
+            if ax is None:
+                fig, ax = plt.subplots()
+
+            # Plot wavelet power spectrum
+            ax.pcolormesh(self.time, self.period, self.phase, shading='auto', 
+                cmap=cmap, **kwargs)
+
+            # Plot cone of influence
+            if plot_coi:
+                ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
+                ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
+            
+            if xlabel is None:
+                xlabel = "Time - 2457000 [BTJD days]"
+            if ylabel is None:
+                ylabel = "Period (days)"
+
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_yscale('log', base=2)
+            ax.set_ylim(self.period.max(), self.period.min())
+
+            ax.set_title(title)
+        return ax
     
 def wavelet_transform(lc, 
                       wavelet=signal.morlet2,
@@ -440,7 +502,7 @@ def wavelet_transform(lc,
     cwtm = signal.cwt(flux, wavelet, widths, w=w)
     power = np.abs(cwtm)**2 / widths[:, np.newaxis]
         
-    fourier_factor = (4 * np.pi) / (self.w + np.sqrt(2 + self.w**2))
+    fourier_factor = (4 * np.pi) / (w + np.sqrt(2 + w**2))
     tt = np.minimum(time, time[-1]-time)
     coi = fourier_factor * tt / np.sqrt(2)
 
