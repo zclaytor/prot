@@ -3,11 +3,21 @@ import numpy as np
 from scipy import signal
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from matplotlib import ticker
+from matplotlib.ticker import FuncFormatter
 
 import lightkurve as lk
 
 from . import MPLSTYLE
+
+
+@FuncFormatter
+def myFormatter(x, pos):
+    if x < 1:
+        n = np.ceil(-np.log10(x)).astype(int)
+        return f"{x:.{n}f}"
+    else:
+        return f"{x:.0f}"
+
 
 class WaveletTransform(object):
     """
@@ -215,7 +225,7 @@ class WaveletTransform(object):
             ax.set_ylabel(ylabel)
             ax.set_yscale('log')
             ax.set_ylim(self.period.max(), self.period.min())
-
+            ax.yaxis.set_major_formatter(myFormatter)
             ax.set_title(title)
         return ax
 
@@ -370,7 +380,7 @@ class WaveletTransform(object):
             ax2 = self._plot_gwps_vertical(ax=ax2, 
                 xlabel='Power', ylabel='', 
                 **gwps_kwargs, **kwargs)
-            ax2.set_yscale('log', base=2)
+            ax2.set_yscale('log')
             ax2.set_ylim(self.period.max(), self.period.min())
             ax2.xaxis.set_ticks([])
             ax2.yaxis.set_visible(False)
@@ -442,8 +452,9 @@ class WaveletTransform(object):
 
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-            ax.set_yscale('log', base=2)
+            ax.set_yscale('log')
             ax.set_ylim(self.period.max(), self.period.min())
+            ax.yaxis.set_major_formatter(myFormatter)
 
             ax.set_title(title)
         return ax
@@ -568,9 +579,10 @@ def wavelet_plot(time, period, power, flux, coi=None,
     ax1.set_xlabel(xlabel)
     ax1.set_ylabel(ylabel)
 
-    ax1.set_yscale('log', base=2)
+    ax1.set_yscale('log')
     ax1.set_ylim(period.max(), period.min())
-    
+    ax1.yaxis.set_major_formatter(myFormatter)
+
     ax2 = fig.add_subplot(gs[1, 1], sharey=ax1)
     global_ws = power.sum(axis=1)
     ax2.plot(global_ws, period, 'k', rasterized=True)
