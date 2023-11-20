@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib import ticker
 
+import lightkurve as lk
+
 from . import MPLSTYLE
 
 class WaveletTransform(object):
@@ -200,13 +202,18 @@ class WaveletTransform(object):
                 ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
             
             if xlabel is None:
-                xlabel = "Time - 2457000 [BTJD days]"
+                if isinstance(self.lightcurve, lk.TessLightCurve):
+                    xlabel = "Time - 2457000 [BTJD days]"
+                elif isinstance(self.lightcurve, lk.KeplerLightCurve):
+                    xlabel = "Time - 2454833 [BKJD days]"
+                else:
+                    xlabel = "Time [days]"
             if ylabel is None:
                 ylabel = "Period (days)"
 
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-            ax.set_yscale('log', base=2)
+            ax.set_yscale('log')
             ax.set_ylim(self.period.max(), self.period.min())
 
             ax.set_title(title)
