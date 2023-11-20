@@ -429,9 +429,14 @@ class WaveletTransform(object):
             if plot_coi:
                 ax.plot(self.time, self.coi, 'k', linewidth=1, rasterized=True)
                 ax.plot(self.time, self.coi, 'w:', linewidth=1, rasterized=True)
-            
+           
             if xlabel is None:
-                xlabel = "Time - 2457000 [BTJD days]"
+                if isinstance(self.lightcurve, lk.TessLightCurve):
+                    xlabel = "Time - 2457000 [BTJD days]"
+                elif isinstance(self.lightcurve, lk.KeplerLightCurve):
+                    xlabel = "Time - 2454833 [BKJD days]"
+                else:
+                    xlabel = "Time [days]"
             if ylabel is None:
                 ylabel = "Period (days)"
 
