@@ -217,7 +217,7 @@ class WaveletTransform(object):
                 elif isinstance(self.lightcurve, lk.KeplerLightCurve):
                     xlabel = "Time - 2454833 [BKJD days]"
                 else:
-                    xlabel = "Time [days]"
+                    xlabel = "Time (days)"
             if ylabel is None:
                 ylabel = "Period (days)"
 
@@ -446,7 +446,7 @@ class WaveletTransform(object):
                 elif isinstance(self.lightcurve, lk.KeplerLightCurve):
                     xlabel = "Time - 2454833 [BKJD days]"
                 else:
-                    xlabel = "Time [days]"
+                    xlabel = "Time (days)"
             if ylabel is None:
                 ylabel = "Period (days)"
 
