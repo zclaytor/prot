@@ -23,7 +23,7 @@ setuptools.setup(
     name="prot",
     version=get_version("prot/__init__.py"),
     author="Zachary R. Claytor",
-    author_email="zclaytor@hawaii.edu",
+    author_email="zclaytor@stsci.edu",
     install_requires=["lightkurve"],
     packages=setuptools.find_packages(),
     include_package_data=True,
