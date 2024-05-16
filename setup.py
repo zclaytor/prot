@@ -26,5 +26,4 @@ setuptools.setup(
     author_email="zclaytor@stsci.edu",
     install_requires=["lightkurve"],
     packages=setuptools.find_packages(),
-    include_package_data=True,
 )
